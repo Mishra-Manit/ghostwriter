@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ghostwriter Settings</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Ghostwriter Settings</h1>
+
+    <!-- API Key Section -->
+    <div class="section">
+      <label for="apiKeyInput">Anthropic API Key</label>
+      <input
+        type="password"
+        id="apiKeyInput"
+        placeholder="sk-ant-..."
+        autocomplete="off"
+      >
+      <button id="saveKeyButton">Save API Key</button>
+      <p class="hint">Get your key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></p>
+    </div>
+
+    <!-- Tone Selection -->
+    <div class="section">
+      <label>Writing Tone</label>
+      <div class="tone-buttons">
+        <button class="tone-btn" data-tone="Professional">Professional</button>
+        <button class="tone-btn" data-tone="Friendly">Friendly</button>
+        <button class="tone-btn" data-tone="Confident">Confident</button>
+      </div>
+      <p class="hint">Selected tone applies to all emails</p>
+    </div>
+
+    <!-- Status -->
+    <div id="status" class="status"></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

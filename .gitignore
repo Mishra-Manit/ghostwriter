@@ -1,0 +1,20 @@
+# API Keys (never commit)
+.env
+*.key
+
+# macOS
+.DS_Store
+
+# Chrome extension
+*.crx
+*.pem
+
+# Logs
+*.log
+
+key.txt
+.claude/
+
+# npm
+node_modules/
+dist/
