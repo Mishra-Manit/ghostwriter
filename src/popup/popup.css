@@ -20,10 +20,58 @@ h1 {
   color: #202124;
 }
 
+/* API Key Compact View */
+.api-key-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #e6f4ea;
+  border: 1px solid #c6e4cc;
+  border-radius: 6px;
+}
+
+.api-key-compact.hidden {
+  display: none;
+}
+
+.api-key-status {
+  font-size: 13px;
+  color: #137333;
+  font-weight: 500;
+}
+
+.link-btn {
+  background: none;
+  color: #4285f4;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.link-btn:hover {
+  background: rgba(66, 133, 244, 0.08);
+  text-decoration: underline;
+}
+
+.link-btn.hidden {
+  display: none;
+}
+
+.api-key-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .section {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.section.hidden {
+  display: none;
 }
 
 label {
@@ -74,15 +122,15 @@ button:disabled {
 
 .tone-buttons {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .tone-btn {
   flex: 1;
   background: #f1f3f4;
   color: #202124;
-  padding: 8px 12px;
-  font-size: 13px;
+  padding: 8px 8px;
+  font-size: 12px;
 }
 
 .tone-btn:hover {
@@ -96,6 +144,66 @@ button:disabled {
 
 .tone-btn.active:hover {
   background: #3367d6;
+}
+
+/* Custom Tone Section */
+.custom-tone-section {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e8eaed;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: slideDown 0.2s ease-out;
+}
+
+.custom-tone-section.hidden {
+  display: none;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.custom-tone-section label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #5f6368;
+}
+
+.custom-tone-section textarea {
+  padding: 10px 12px;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.5;
+  transition: border-color 0.2s;
+}
+
+.custom-tone-section textarea:focus {
+  outline: none;
+  border-color: #4285f4;
+}
+
+.custom-tone-section textarea::placeholder {
+  color: #9aa0a6;
+}
+
+.custom-tone-section button {
+  padding: 8px 14px;
+  font-size: 13px;
 }
 
 .hint {

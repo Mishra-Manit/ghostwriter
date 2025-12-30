@@ -137,20 +137,21 @@ async function handleGhostwrite(composeView, button) {
 
         // 8. Handle response
         if (response.success) {
-            // Clear existing content first
-            composeView.setBodyText('');
+            // Check if this is a new email with subject and body
+            if (response.isNewEmail && response.subject && response.body) {
+                console.log('Ghostwriter: New email with subject and body');
 
-            // Get the compose body element for direct DOM manipulation
-            const composeElement = composeView.getBodyElement();
+                // Set the subject line
+                composeView.setSubject(response.subject);
+                console.log('Ghostwriter: Subject set:', response.subject);
 
-            if (composeElement) {
-                // Directly insert HTML into the contentEditable div
-                composeElement.innerHTML = response.polishedText;
-                console.log('Ghostwriter: Draft updated with formatted HTML via DOM');
+                // Use InboxSDK's setBodyHTML for proper Gmail integration
+                composeView.setBodyHTML(response.body);
+                console.log('Ghostwriter: Body updated with setBodyHTML');
             } else {
-                // Fallback to setBodyText if DOM manipulation fails
-                console.warn('Ghostwriter: Could not get body element, using setBodyText');
-                composeView.setBodyText(response.polishedText.replace(/<[^>]*>/g, ''));
+                // Reply or polish mode - use InboxSDK's setBodyHTML
+                composeView.setBodyHTML(response.polishedText);
+                console.log('Ghostwriter: Draft updated with setBodyHTML');
             }
         } else {
             alert(`Ghostwriter Error: ${response.error}`);
@@ -181,6 +182,8 @@ function extractThreadContext(composeView) {
     // - Expanded messages: .gs (without .gt) - has .a3s body with full content
     // - Collapsed messages: .gs.gt - has .iA.g6 span with preview snippet
     // - Sender is in span.gD with email and name attributes
+    // - Quoted content (previous emails) wrapped in .gmail_quote, .gmail_quote_container,
+    //   blockquote.gmail_quote, .gmail_attr, .HOEnZb, .h5 - these are filtered out
 
     // Find all message containers using .gs class
     const messageContainers = document.querySelectorAll('.gs');
@@ -227,8 +230,24 @@ function extractThreadContext(composeView) {
                 // Expanded message: extract full body from .a3s
                 const bodyElement = msg.querySelector('.a3s.aiL, .a3s');
                 if (bodyElement) {
-                    body = bodyElement.innerText.trim();
-                    console.log(`  [EXPANDED] Body length: ${body.length}`);
+                    // Clone the element to avoid modifying the actual DOM
+                    const bodyClone = bodyElement.cloneNode(true);
+
+                    // Remove quoted content (previous emails in thread) to avoid duplicates
+                    // Gmail wraps quoted content in these elements:
+                    // - .gmail_quote: main container for quoted replies
+                    // - .gmail_quote_container: alternative container
+                    // - blockquote.gmail_quote: blockquote-style quotes
+                    // - .gmail_attr: "On [date], [sender] wrote:" attribution line
+                    // - .HOEnZb: container for hidden/trimmed content
+                    // - .h5: another container for quoted content
+                    bodyClone.querySelectorAll(
+                        '.gmail_quote, .gmail_quote_container, blockquote.gmail_quote, ' +
+                        '.gmail_attr, .HOEnZb, .h5'
+                    ).forEach(el => el.remove());
+
+                    body = bodyClone.innerText.trim();
+                    console.log(`  [EXPANDED] Body length: ${body.length} (quoted content filtered)`);
                 }
             }
 

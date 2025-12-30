@@ -10,8 +10,14 @@
   <div class="container">
     <h1>Ghostwriter Settings</h1>
 
-    <!-- API Key Section -->
-    <div class="section">
+    <!-- API Key Section - Compact (shown when key exists) -->
+    <div id="apiKeyCompact" class="api-key-compact hidden">
+      <span class="api-key-status">API Key configured</span>
+      <button id="changeKeyButton" class="link-btn">Change API Key</button>
+    </div>
+
+    <!-- API Key Section - Full (shown when no key or editing) -->
+    <div id="apiKeyFull" class="section">
       <label for="apiKeyInput">Anthropic API Key</label>
       <input
         type="password"
@@ -19,7 +25,10 @@
         placeholder="sk-ant-..."
         autocomplete="off"
       >
-      <button id="saveKeyButton">Save API Key</button>
+      <div class="api-key-actions">
+        <button id="saveKeyButton">Save API Key</button>
+        <button id="cancelKeyButton" class="link-btn hidden">Cancel</button>
+      </div>
       <p class="hint">Get your key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></p>
     </div>
 
@@ -30,8 +39,21 @@
         <button class="tone-btn" data-tone="Professional">Professional</button>
         <button class="tone-btn" data-tone="Friendly">Friendly</button>
         <button class="tone-btn" data-tone="Confident">Confident</button>
+        <button class="tone-btn" data-tone="Casual">Casual</button>
+        <button class="tone-btn" data-tone="Custom">Custom</button>
       </div>
       <p class="hint">Selected tone applies to all emails</p>
+
+      <!-- Custom Tone Section (hidden by default) -->
+      <div id="customToneSection" class="custom-tone-section hidden">
+        <label for="customToneInput">Custom Writing Preferences</label>
+        <textarea
+          id="customToneInput"
+          placeholder="Describe your preferred writing style, tone, and any specific preferences...&#10;&#10;Examples:&#10;• Casual but professional, use contractions&#10;• Direct and concise, avoid filler words&#10;• Warm and empathetic, show understanding"
+          rows="5"
+        ></textarea>
+        <button id="saveCustomToneButton">Save Custom Preferences</button>
+      </div>
     </div>
 
     <!-- Status -->

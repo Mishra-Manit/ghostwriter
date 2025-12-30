@@ -1,24 +1,69 @@
 // Load saved settings when popup opens
 document.addEventListener('DOMContentLoaded', async () => {
   try {
-    // Load API key and tone from storage
-    const { anthropicApiKey, tone } = await chrome.storage.local.get([
+    // Load API key, tone, and custom tone preferences from storage
+    const { anthropicApiKey, tone, customTonePreferences } = await chrome.storage.local.get([
       'anthropicApiKey',
-      'tone'
+      'tone',
+      'customTonePreferences'
     ]);
 
-    // Populate API key field if exists
+    // Show compact or full API key section based on whether key exists
     if (anthropicApiKey) {
-      document.getElementById('apiKeyInput').value = anthropicApiKey;
+      showApiKeyCompact();
+    } else {
+      showApiKeyFull(false); // No cancel button for first-time setup
+    }
+
+    // Populate custom tone textarea if exists
+    if (customTonePreferences) {
+      document.getElementById('customToneInput').value = customTonePreferences;
     }
 
     // Highlight selected tone (default: Professional)
     const selectedTone = tone || 'Professional';
     highlightTone(selectedTone);
+
+    // Show custom section if Custom tone is selected
+    if (selectedTone === 'Custom') {
+      document.getElementById('customToneSection').classList.remove('hidden');
+    }
   } catch (error) {
     console.error('Error loading settings:', error);
     showStatus('Error loading settings', 'error');
   }
+});
+
+// Helper: Show compact API key view
+function showApiKeyCompact() {
+  document.getElementById('apiKeyCompact').classList.remove('hidden');
+  document.getElementById('apiKeyFull').classList.add('hidden');
+}
+
+// Helper: Show full API key form
+function showApiKeyFull(showCancel = true) {
+  document.getElementById('apiKeyCompact').classList.add('hidden');
+  document.getElementById('apiKeyFull').classList.remove('hidden');
+
+  const cancelBtn = document.getElementById('cancelKeyButton');
+  if (showCancel) {
+    cancelBtn.classList.remove('hidden');
+  } else {
+    cancelBtn.classList.add('hidden');
+  }
+}
+
+// Change API Key button
+document.getElementById('changeKeyButton').addEventListener('click', async () => {
+  // Load current key into input for editing
+  const { anthropicApiKey } = await chrome.storage.local.get(['anthropicApiKey']);
+  document.getElementById('apiKeyInput').value = anthropicApiKey || '';
+  showApiKeyFull(true);
+});
+
+// Cancel API Key edit
+document.getElementById('cancelKeyButton').addEventListener('click', () => {
+  showApiKeyCompact();
 });
 
 // Save API key
@@ -40,7 +85,8 @@ document.getElementById('saveKeyButton').addEventListener('click', async () => {
 
   try {
     await chrome.storage.local.set({ anthropicApiKey: apiKey });
-    showStatus('API key saved successfully!', 'success');
+    showApiKeyCompact();
+    showStatus('API key saved!', 'success');
   } catch (error) {
     console.error('Error saving API key:', error);
     showStatus('Error saving API key', 'error');
@@ -51,16 +97,43 @@ document.getElementById('saveKeyButton').addEventListener('click', async () => {
 document.querySelectorAll('.tone-btn').forEach(btn => {
   btn.addEventListener('click', async () => {
     const tone = btn.dataset.tone;
+    const customSection = document.getElementById('customToneSection');
 
     try {
       await chrome.storage.local.set({ tone });
       highlightTone(tone);
-      showStatus(`Tone set to ${tone}`, 'success');
+
+      // Show/hide custom section based on selection
+      if (tone === 'Custom') {
+        customSection.classList.remove('hidden');
+        showStatus('Customize your writing preferences below', 'success');
+      } else {
+        customSection.classList.add('hidden');
+        showStatus(`Tone set to ${tone}`, 'success');
+      }
     } catch (error) {
       console.error('Error saving tone:', error);
       showStatus('Error saving tone', 'error');
     }
   });
+});
+
+// Save custom tone preferences
+document.getElementById('saveCustomToneButton').addEventListener('click', async () => {
+  const customPreferences = document.getElementById('customToneInput').value.trim();
+
+  if (!customPreferences) {
+    showStatus('Please enter your custom preferences', 'error');
+    return;
+  }
+
+  try {
+    await chrome.storage.local.set({ customTonePreferences: customPreferences });
+    showStatus('Custom preferences saved!', 'success');
+  } catch (error) {
+    console.error('Error saving custom preferences:', error);
+    showStatus('Error saving preferences', 'error');
+  }
 });
 
 // Helper: Highlight selected tone button

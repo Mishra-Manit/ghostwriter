@@ -1,6 +1,8 @@
 // Ghostwriter Background Service Worker
 // Handles Anthropic API calls with Claude Sonnet 4.5
 
+import { buildSystemPrompt, buildUserMessage } from './prompts.js';
+
 console.log('Ghostwriter: Background service worker initialized');
 
 // Listen for messages from content script
@@ -63,8 +65,8 @@ async function handleGhostwriteRequest({ draft, context, tone, mode }) {
     });
     console.groupEnd();
 
-    // 1. Get API key from storage
-    const { anthropicApiKey } = await chrome.storage.local.get(['anthropicApiKey']);
+    // 1. Get API key and custom tone preferences from storage
+    const { anthropicApiKey, customTonePreferences } = await chrome.storage.local.get(['anthropicApiKey', 'customTonePreferences']);
 
     // DEBUG: Log API key info (masked for security)
     if (!anthropicApiKey) {
@@ -85,11 +87,12 @@ async function handleGhostwriteRequest({ draft, context, tone, mode }) {
     }
 
     // 2. Build system prompt based on tone, mode, and context
-    const systemPrompt = buildSystemPrompt(tone, mode, context.type);
+    const systemPrompt = buildSystemPrompt(tone, mode, context.type, customTonePreferences);
     console.log('Ghostwriter: System prompt built');
     console.log('Ghostwriter: System prompt details:', {
       length: systemPrompt.length,
       tone: tone,
+      customPreferences: tone === 'Custom' ? customTonePreferences : null,
       mode: mode,
       contextType: context.type,
       fullPrompt: systemPrompt
@@ -182,17 +185,44 @@ async function handleGhostwriteRequest({ draft, context, tone, mode }) {
         throw new Error('Invalid API response format');
       }
 
-      const polishedText = data.content[0].text;
-      console.log('Ghostwriter: Polished text length:', polishedText.length);
+      const rawText = data.content[0].text;
+      console.log('Ghostwriter: Raw response length:', rawText.length);
       console.log('Ghostwriter: API response processed:', {
         contentType: data.content[0].type,
-        outputLength: polishedText.length,
-        outputPreview: polishedText.substring(0, 100) + (polishedText.length > 100 ? '...' : '')
+        outputLength: rawText.length,
+        outputPreview: rawText.substring(0, 100) + (rawText.length > 100 ? '...' : '')
       });
 
+      // For new compose emails (not replies), parse JSON response
+      if (context.type === 'compose') {
+        try {
+          // Strip markdown code blocks if present (e.g., ```json ... ```)
+          let jsonText = rawText.trim();
+          if (jsonText.startsWith('```')) {
+            jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
+          }
+
+          // Try to parse as JSON for new emails
+          const jsonResponse = JSON.parse(jsonText);
+          if (jsonResponse.subject && jsonResponse.body) {
+            console.log('Ghostwriter: Parsed JSON response with subject and body');
+            return {
+              success: true,
+              isNewEmail: true,
+              subject: jsonResponse.subject,
+              body: jsonResponse.body
+            };
+          }
+        } catch (parseError) {
+          console.warn('Ghostwriter: Could not parse as JSON, treating as plain HTML:', parseError);
+        }
+      }
+
+      // For replies or if JSON parsing fails, return as polishedText
       return {
         success: true,
-        polishedText
+        isNewEmail: false,
+        polishedText: rawText
       };
 
     } catch (fetchError) {
@@ -211,53 +241,4 @@ async function handleGhostwriteRequest({ draft, context, tone, mode }) {
       error: error.message || 'Unknown error occurred'
     };
   }
-}
-
-// Build tone-aware system prompt with context awareness
-function buildSystemPrompt(tone, mode, contextType) {
-  const toneDescriptions = {
-    'Professional': 'professional and formal',
-    'Friendly': 'warm and approachable',
-    'Confident': 'assertive and direct'
-  };
-
-  const toneStyle = toneDescriptions[tone] || 'professional';
-
-  // Add context-specific instructions
-  const contextInstruction = contextType === 'reply'
-    ? ' IMPORTANT: This is a reply to an existing email thread, so DO NOT include a subject line - only provide the email body.'
-    : ' Include both a subject line and email body.';
-
-  // Add formatting instruction for HTML output (will be wrapped in div)
-  const formattingInstruction = ' Format your response using simple HTML tags for structure: use <p> for paragraphs, <br> for line breaks, <strong> for bold, <em> for emphasis. Keep it clean and simple - NO <html>, <head>, or <body> tags, just the content tags.';
-
-  if (mode === 'polish') {
-    return `You are a professional email ghostwriter. Polish the provided draft into a ${toneStyle} email. Maintain the user's intent but improve clarity, tone, and professionalism. Keep it concise and ready to send.${contextInstruction}${formattingInstruction}`;
-  } else {
-    return `You are a professional email ghostwriter. Based on the thread context provided, generate a ${toneStyle} email response. Be contextually appropriate, concise, and ready to send.${contextInstruction}${formattingInstruction}`;
-  }
-}
-
-// Build user message with context
-function buildUserMessage(draft, context, mode) {
-  let message = '';
-
-  // Add thread context if available
-  if (context.type === 'reply' && context.messages && context.messages.length > 0) {
-    message += "Previous messages in thread:\n\n";
-
-    context.messages.forEach((msg, i) => {
-      message += `Message ${i + 1} from ${msg.sender}:\n${msg.body}\n\n`;
-    });
-
-    message += "---\n\n";
-  }
-
-  if (mode === 'polish') {
-    message += `My draft:\n${draft}\n\nPlease polish this into a ready-to-send email.`;
-  } else {
-    message += `Please generate a professional email response based on the context above.`;
-  }
-
-  return message;
 }
