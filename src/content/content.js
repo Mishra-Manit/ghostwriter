@@ -145,13 +145,21 @@ async function handleGhostwrite(composeView, button) {
                 composeView.setSubject(response.subject);
                 console.log('Ghostwriter: Subject set:', response.subject);
 
-                // Use InboxSDK's setBodyHTML for proper Gmail integration
+                // Use InboxSDK's setBodyHTML for initial insertion, then immediately clean formatting
                 composeView.setBodyHTML(response.body);
-                console.log('Ghostwriter: Body updated with setBodyHTML');
+                console.log('Ghostwriter: Body inserted with setBodyHTML');
+
+                // Immediately clean up formatting using plain text replacement
+                cleanBodyFormatting(composeView);
+                console.log('Ghostwriter: Body formatting cleaned');
             } else {
-                // Reply or polish mode - use InboxSDK's setBodyHTML
+                // Reply or polish mode - use InboxSDK's setBodyHTML, then clean
                 composeView.setBodyHTML(response.polishedText);
-                console.log('Ghostwriter: Draft updated with setBodyHTML');
+                console.log('Ghostwriter: Draft inserted with setBodyHTML');
+
+                // Immediately clean up formatting using plain text replacement
+                cleanBodyFormatting(composeView);
+                console.log('Ghostwriter: Draft formatting cleaned');
             }
         } else {
             alert(`Ghostwriter Error: ${response.error}`);
@@ -280,6 +288,32 @@ function extractThreadContext(composeView) {
     });
 
     return { type: 'reply', messages };
+}
+
+// Clean body formatting by replacing with plain text in Gmail's native div structure
+// This strips all inline styles and unwanted formatting from AI-generated content
+function cleanBodyFormatting(composeView) {
+    try {
+        const bodyElement = composeView.getBodyElement();
+
+        if (!bodyElement) {
+            console.warn('Ghostwriter: Could not find body element for formatting cleanup');
+            return;
+        }
+
+        // Extract pure text content (strips all HTML/styles)
+        const plainText = bodyElement.innerText;
+        console.log('Ghostwriter: Cleaning formatting, text length:', plainText.length);
+
+        // Rebuild using Gmail's native structure: each line in a <div>, empty lines as <div><br></div>
+        bodyElement.innerHTML = plainText.split('\n').map(line =>
+            line.trim() ? `<div>${line}</div>` : '<div><br></div>'
+        ).join('');
+
+        console.log('Ghostwriter: Formatting cleanup complete');
+    } catch (error) {
+        console.warn('Ghostwriter: Error cleaning formatting:', error);
+    }
 }
 
 // Track loading state (InboxSDK compose buttons don't support setEnabled)
