@@ -187,7 +187,7 @@ button:disabled {
   font-size: 13px;
   font-family: inherit;
   resize: vertical;
-  min-height: 80px;
+  min-height: 140px;
   line-height: 1.5;
   transition: border-color 0.2s;
 }
