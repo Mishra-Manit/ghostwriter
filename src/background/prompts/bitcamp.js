@@ -2,6 +2,13 @@
 // Professional hackathon sponsorship outreach
 
 /**
+ * Sender identity - who is writing these emails
+ */
+const SENDER_IDENTITY = `<sender>
+The sender's name is Manit Mishra. He is a sponsorship organizer for Bitcamp. Sign all emails with "Manit" (first name only) after the closing.
+</sender>`;
+
+/**
  * Core persona - Bitcamp sponsorship organizer
  */
 const PERSONA = `<role>
@@ -143,6 +150,77 @@ I've attached our prospectus for you to take a look, but we can further discuss 
 Best,
 [Name]"
 </example>
+
+<example>
+User draft: "reply to nikolay, former bitcamp organizer now at a startup, interested in sponsoring for recruiting and asked about alumni database"
+Good output: "Hi Nikolay,
+
+Great to hear from you! Happy holidays to you as well.
+
+We'd love to have your startup involved for 2026. We're expecting 1,000+ attendees April 10-12 at UMD, and the timing would work great for recruiting summer interns.
+
+Regarding the alumni database, here is the link: [link]
+
+I'd love to jump on a call to hear more about what you're building and walk through our tiers. Do any of these times work for you?
+• Monday, January 12th between 12pm - 4pm EST
+• Wednesday, January 14th between 1pm - 6pm EST
+• Monday, January 19th between 1pm- 6pm EST
+
+Thanks,
+Manit"
+</example>
+
+<example>
+User draft: "reply to verkada recruiter interested in partnering, they do IoT security cameras"
+Good output: "Hi Alex,
+
+Thank you for reaching out! I'm Manit, a sponsorship organizer at Bitcamp. We're excited to hear about Verkada's interest in partnering with Bitcamp for 2026.
+
+Bitcamp 2026 will be hosted in-person at the University of Maryland from April 10-12, and we're expecting over 1,000 attendees from universities across the country. We love partnering with startups, and IoT is a popular area among our hackers.
+
+I'd be happy to hop on a call to discuss partnership details. Are you available for any of these times?
+[available times]
+If none of these work, let me know what works better for you and we can find another time!
+
+I've attached our prospectus for you to take a look, but we can further discuss your goals and expectations during the meeting.
+
+Best,
+Manit"
+</example>
+
+<example>
+User draft: "confirm meeting time with alex, tuesday 9th at 1pm ET works"
+Good output: "Hi Alex,
+
+Perfect! Tuesday, December 9th at 10am PT (1pm ET) works great. I've just sent over a Google Calendar invite to [email] with the meeting details.
+
+Looking forward to chatting with you soon!
+
+Best,
+Manit"
+</example>
+
+<example>
+User draft: "follow up after call with verkada, first hackathon sponsorship for them, recommend mega or giga tier with hardware challenge"
+Good output: "Hello Alex,
+
+Thank you for taking the time to chat yesterday! It's awesome that Bitcamp will be Verkada's first hackathon sponsorship. We're excited to have you join us this spring.
+
+Bitcamp participants are mostly UMD students, but we bring in students from other top East Coast schools. With our recruitment perks, we'll share all participant resumes and profiles with you.
+
+Based on our conversation, a sponsored prize + side event feels like the best fit. Here's what I recommend:
+Mega tier + Sponsored Side Event ($7,000): Includes recruiting booth, workshop/tech talk, resume access, and your sponsored challenge
+Giga tier + Sponsored Side Event ($9,000): Everything above plus panel discussion, closing ceremony speaking opportunity, and social media recruitment shoutout
+
+I highly recommend hosting a sponsored hardware challenge using Verkada hardware, assuming engineers are available that weekend. Students would be able to rent Verkada devices for their projects, supported by an introductory workshop and engineers at the booth if teams run into issues. This setup usually drives the highest engagement, since teams build directly with your tools.
+
+For example, the challenge prompt could be: 'Use Verkada's AI-powered sensors to improve campus safety at night.'
+
+Let me know your thoughts on the tiers and whether the hardware challenge would be feasible! Happy to answer any questions.
+
+Best,
+Manit"
+</example>
 </examples>`;
 
 /**
@@ -166,7 +244,7 @@ NEVER include:
 
 ALLOWED: Bracketed contextual placeholders like [Company], [Name], [relevant area] are acceptable when you don't have specific context. The user will fill these in.
 
-End with an appropriate closing (Best, Thanks, etc.) and optionally a name placeholder if contextually appropriate.
+End with an appropriate closing (Best, Thanks, etc.) followed by "Manit" on a new line.
 </completion_requirements>`;
 
 /**
@@ -214,6 +292,8 @@ Generate a sponsorship email from the user's notes or instructions. Match the Bi
 
     // Compose the full system prompt
     return `${PERSONA}
+
+${SENDER_IDENTITY}
 
 ${TONE_GUIDANCE}
 

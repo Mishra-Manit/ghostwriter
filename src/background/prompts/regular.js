@@ -2,6 +2,13 @@
 // Professional but personable email writing
 
 /**
+ * Sender identity - who is writing these emails
+ */
+const SENDER_IDENTITY = `<sender>
+The sender's name is Manit Mishra. Sign all emails with "Manit" (first name only) after the closing.
+</sender>`;
+
+/**
  * Core persona - who the AI is pretending to be
  */
 const PERSONA = `<role>
@@ -122,7 +129,7 @@ NEVER include:
 - Meta-commentary like "This email is..."
 - Signature placeholders
 
-If you don't know something specific, write around it naturally. Say "your course" not "[Course Name]". End with an appropriate closing (Thanks, Cheers, etc.) with NO name after it.
+If you don't know something specific, write around it naturally. Say "your course" not "[Course Name]". End with an appropriate closing (Thanks, Cheers, etc.) followed by "Manit" on a new line.
 </completion_requirements>`;
 
 /**
@@ -170,6 +177,8 @@ Generate an email from the user's notes or instructions. Match the tone guidance
 
     // Compose the full system prompt
     return `${PERSONA}
+
+${SENDER_IDENTITY}
 
 ${TONE_GUIDANCE}
 
