@@ -1,11 +1,10 @@
 // Load saved settings when popup opens
 document.addEventListener('DOMContentLoaded', async () => {
   try {
-    // Load API key, tone, and custom tone preferences from storage
-    const { anthropicApiKey, tone, customTonePreferences } = await chrome.storage.local.get([
+    // Load API key and tone from storage
+    const { anthropicApiKey, tone } = await chrome.storage.local.get([
       'anthropicApiKey',
-      'tone',
-      'customTonePreferences'
+      'tone'
     ]);
 
     // Show compact or full API key section based on whether key exists
@@ -15,19 +14,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       showApiKeyFull(false); // No cancel button for first-time setup
     }
 
-    // Populate custom tone textarea if exists
-    if (customTonePreferences) {
-      document.getElementById('customToneInput').value = customTonePreferences;
-    }
-
-    // Highlight selected tone (default: Professional)
-    const selectedTone = tone || 'Professional';
+    // Highlight selected tone (default: Regular)
+    const selectedTone = tone || 'Regular';
     highlightTone(selectedTone);
-
-    // Show custom section if Custom tone is selected
-    if (selectedTone === 'Custom') {
-      document.getElementById('customToneSection').classList.remove('hidden');
-    }
   } catch (error) {
     console.error('Error loading settings:', error);
     showStatus('Error loading settings', 'error');
@@ -97,43 +86,16 @@ document.getElementById('saveKeyButton').addEventListener('click', async () => {
 document.querySelectorAll('.tone-btn').forEach(btn => {
   btn.addEventListener('click', async () => {
     const tone = btn.dataset.tone;
-    const customSection = document.getElementById('customToneSection');
 
     try {
       await chrome.storage.local.set({ tone });
       highlightTone(tone);
-
-      // Show/hide custom section based on selection
-      if (tone === 'Custom') {
-        customSection.classList.remove('hidden');
-        showStatus('Customize your writing preferences below', 'success');
-      } else {
-        customSection.classList.add('hidden');
-        showStatus(`Tone set to ${tone}`, 'success');
-      }
+      showStatus(`Tone set to ${tone}`, 'success');
     } catch (error) {
       console.error('Error saving tone:', error);
       showStatus('Error saving tone', 'error');
     }
   });
-});
-
-// Save custom tone preferences
-document.getElementById('saveCustomToneButton').addEventListener('click', async () => {
-  const customPreferences = document.getElementById('customToneInput').value.trim();
-
-  if (!customPreferences) {
-    showStatus('Please enter your custom preferences', 'error');
-    return;
-  }
-
-  try {
-    await chrome.storage.local.set({ customTonePreferences: customPreferences });
-    showStatus('Custom preferences saved!', 'success');
-  } catch (error) {
-    console.error('Error saving custom preferences:', error);
-    showStatus('Error saving preferences', 'error');
-  }
 });
 
 // Helper: Highlight selected tone button

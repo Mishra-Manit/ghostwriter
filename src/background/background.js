@@ -49,15 +49,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Main API request handler
 async function handleGhostwriteRequest({ draft, context, tone, mode }) {
   try {
-    // 1. Get API key and custom tone preferences from storage
-    const { anthropicApiKey, customTonePreferences } = await chrome.storage.local.get(['anthropicApiKey', 'customTonePreferences']);
+    // 1. Get API key from storage
+    const { anthropicApiKey } = await chrome.storage.local.get(['anthropicApiKey']);
 
     if (!anthropicApiKey) {
       throw new Error('API key not configured. Click extension icon to set up.');
     }
 
     // 2. Build system prompt based on tone, mode, and context
-    const systemPrompt = buildSystemPrompt(tone, mode, context.type, customTonePreferences);
+    const systemPrompt = buildSystemPrompt(tone, mode, context.type);
 
     // 3. Build user message
     const userMessage = buildUserMessage(draft, context, mode);

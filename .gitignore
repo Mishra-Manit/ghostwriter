@@ -18,3 +18,5 @@ key.txt
 # npm
 node_modules/
 dist/
+
+CLAUDE.MD

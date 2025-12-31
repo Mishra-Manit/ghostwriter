@@ -69,45 +69,82 @@ WRITE NATURALLY:
  * Tone descriptions with behavioral guidance and examples
  */
 export const TONE_DESCRIPTIONS = {
-    'Professional': `Clear and businesslike. Uses proper grammar but isn't stiff. Focuses on facts and next steps. Respects the reader's time.
-Example opener: "Following up on our meeting about the Q3 timeline."
-Example closer: "Let me know if you need anything else."`,
+    'Regular': `Write in a regular tone - professional but personable. Clear and efficient while maintaining warmth. Sounds like a competent colleague you'd enjoy working with. Uses proper grammar with natural contractions. Balances business focus with human connection.
 
-    'Friendly': `Conversational and personable. Sounds like a colleague you'd grab coffee with. Uses contractions freely. May include a brief personal touch.
-Example opener: "Great chatting with you yesterday!"
-Example closer: "Thanks again, talk soon."`,
+CHARACTERISTICS:
+• Direct purpose statements without corporate fluff
+• Natural conversational flow with professional boundaries
+• Appropriate personal touches without oversharing
+• Clear next steps and expectations
+• Respectful of recipient's time
 
-    'Confident': `Direct and decisive. Gets to the point fast. Uses active voice. States positions clearly without hedging.
-Example opener: "Here's what I need from you."
-Example closer: "I'll follow up Friday if I haven't heard back."`,
+EXAMPLE OPENER: "Following up on the proposal I sent Thursday."
+EXAMPLE MID: "I know you're juggling a lot, but I'd appreciate your thoughts when you get a chance."
+EXAMPLE CLOSER: "Let me know what works for you." or "Happy to discuss further if helpful."`,
 
-    'Casual': `Very informal, like texting a close coworker or friend. Short sentences. Can skip formalities entirely. Fragments are fine. Lowercase okay for emphasis.
-Example opener: "hey, quick question"
-Example closer: "thanks!" or "lmk"`
+    'Bitcamp': `Write in a Bitcamp sponsorship tone - professional yet enthusiastic outreach for University of Maryland's college hackathon. Demonstrates credibility while conveying genuine partnership opportunity. Appropriate for VP/Director-level contacts in Developer Relations, Recruiting, or Marketing.
+
+STRUCTURE:
+• Personalized opening mentioning recipient's company/initiatives
+• Clear value proposition focused on sponsor benefits (talent pipeline, brand visibility, community engagement)
+• Concrete details about event (500+ students, 24-hour hackathon, UMD)
+• Partnership framing (not donation request)
+• Confident but respectful call-to-action
+
+KEY POINTS TO EMPHASIZE:
+• Access to 500+ motivated CS/engineering students
+• Recruiting pipeline for internships and full-time roles
+• Developer community engagement and brand visibility
+• University of Maryland's tech talent pipeline
+• Past sponsor success stories when relevant
+
+EXAMPLE OPENER: "I noticed [Company]'s strong presence in the developer community, particularly your work with [specific initiative]. I'm reaching out from Bitcamp, University of Maryland's largest college hackathon."
+EXAMPLE VALUE PROP: "Past sponsors like [Company X] found value in both the recruiting pipeline and brand visibility with our tech-focused audience of 500+ students."
+EXAMPLE CLOSER: "Would you have 15 minutes next week for a quick call? I can walk you through our sponsorship tiers and past event outcomes."`
 };
 
 /**
  * Few-shot examples for each tone
  */
 export const FEW_SHOT_EXAMPLES = `<examples>
-<example tone="Professional">
-User draft: "tell john the report will be late, need 2 more days"
-Good output: "Hi John, the report is taking longer than expected. I need until Wednesday to get it right. I'll send it over as soon as it's ready."
+<example tone="Regular">
+User draft: "hey can you send me that report when you get a sec"
+Good output: "Could you send me the Q3 report when you get a chance? No rush."
 </example>
 
-<example tone="Friendly">
-User draft: "thank sarah for covering my shift"
-Good output: "Sarah! You're the best for covering yesterday. I owe you one. Coffee's on me next week."
+<example tone="Regular">
+User draft: "following up on my email from last week about the project timeline"
+Good output: "Following up on my email from last week about the project timeline. Have you had a chance to review it?"
 </example>
 
-<example tone="Confident">
-User draft: "tell team we're changing the deadline"
-Good output: "Team, we're pushing the launch to March 15. This gives us time to fix the bugs QA found. No exceptions on the new date."
+<example tone="Regular">
+User draft: "thanks for your help with this"
+Good output: "Thanks for your help with this—really appreciate it."
 </example>
 
-<example tone="Casual">
-User draft: "ask mike if he's coming to lunch"
-Good output: "hey mike, you coming to lunch? we're doing tacos"
+<example tone="Bitcamp">
+User draft: "interested in sponsoring bitcamp?"
+Good output: "I noticed [Company]'s commitment to supporting student developers through your recent [initiative]. I'm reaching out from Bitcamp, University of Maryland's largest college hackathon, to explore a potential partnership.
+
+This April, we're bringing together 500+ CS and engineering students for 24 hours of innovation and collaboration. Past sponsors have found particular value in the recruiting pipeline—many have hired interns and full-time engineers from our participant pool.
+
+Would you have 15 minutes next week to discuss how [Company] could get involved? I can walk you through our sponsorship tiers and share outcomes from past events."
+</example>
+
+<example tone="Bitcamp">
+User draft: "following up on sponsorship email"
+Good output: "Following up on my email from last week about Bitcamp sponsorship opportunities. I know how busy this time of year gets.
+
+Quick context: We're finalizing our sponsor lineup for April's event, and I think [Company] would be a great fit given your focus on [relevant area]. Happy to send over our prospectus or jump on a quick call—whatever works best for you."
+</example>
+
+<example tone="Bitcamp">
+User draft: "thanks for meeting"
+Good output: "Thanks for taking the time to chat about Bitcamp yesterday. Really enjoyed learning more about [Company]'s campus recruiting strategy.
+
+I've attached our sponsorship prospectus as discussed. The Gold tier seems like the best fit based on your goals around developer community engagement and early talent pipeline.
+
+Let me know if you have any questions—happy to walk through anything in more detail."
 </example>
 </examples>`;
 
@@ -151,27 +188,17 @@ Format: {"subject": "Subject text here", "body": "<p>Email body HTML here</p>"}
 
 /**
  * Build the complete system prompt
- * @param {string} tone - The email tone (Professional, Friendly, Confident, Casual)
+ * @param {string} tone - The email tone (Regular, Bitcamp)
  * @param {string} mode - The generation mode (polish, generate)
  * @param {string} contextType - The context type (reply, compose)
- * @param {string} customTonePreferences - Custom tone preferences if tone is Custom
  * @returns {string} Complete system prompt
  */
-export function buildSystemPrompt(tone, mode, contextType, customTonePreferences = null) {
+export function buildSystemPrompt(tone, mode, contextType) {
     // Build tone guidance section
-    let toneGuidance;
-    if (tone === 'Custom' && customTonePreferences) {
-        toneGuidance = `<tone_guidance>
-Follow the user's custom writing preferences closely:
-${customTonePreferences}
-</tone_guidance>`;
-    } else {
-        const toneDesc = TONE_DESCRIPTIONS[tone] || TONE_DESCRIPTIONS['Professional'];
-        toneGuidance = `<tone_guidance>
-Write in a ${tone.toLowerCase()} tone:
+    const toneDesc = TONE_DESCRIPTIONS[tone] || TONE_DESCRIPTIONS['Regular'];
+    const toneGuidance = `<tone_guidance>
 ${toneDesc}
 </tone_guidance>`;
-    }
 
     // Build mode-specific instruction
     let modeInstruction;
