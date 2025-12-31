@@ -8,12 +8,15 @@
 </head>
 <body>
   <div class="container">
-    <h1>Ghostwriter Settings</h1>
+    <header class="header">
+      <h1>Ghostwriter</h1>
+      <p class="subtitle">AI-Powered Email Assistant</p>
+    </header>
 
     <!-- API Key Section - Compact (shown when key exists) -->
     <div id="apiKeyCompact" class="api-key-compact hidden">
-      <span class="api-key-status">API Key configured</span>
-      <button id="changeKeyButton" class="link-btn">Change API Key</button>
+      <span class="api-key-status">✓ API Key configured</span>
+      <button id="changeKeyButton" class="link-btn">Change</button>
     </div>
 
     <!-- API Key Section - Full (shown when no key or editing) -->
@@ -35,7 +38,8 @@
     <!-- Tone Selection -->
     <div class="section">
       <label>Writing Tone</label>
-      <div class="tone-buttons">
+      <div class="segmented-control">
+        <div class="segmented-indicator"></div>
         <button class="tone-btn" data-tone="Regular">Regular</button>
         <button class="tone-btn" data-tone="Bitcamp">Bitcamp</button>
       </div>

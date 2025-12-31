@@ -98,11 +98,20 @@ document.querySelectorAll('.tone-btn').forEach(btn => {
   });
 });
 
-// Helper: Highlight selected tone button
+// Helper: Highlight selected tone button with sliding indicator
 function highlightTone(selectedTone) {
-  document.querySelectorAll('.tone-btn').forEach(btn => {
+  const buttons = document.querySelectorAll('.tone-btn');
+  const indicator = document.querySelector('.segmented-indicator');
+
+  buttons.forEach((btn, index) => {
     if (btn.dataset.tone === selectedTone) {
       btn.classList.add('active');
+
+      // Update sliding indicator position
+      if (indicator) {
+        const offset = index * btn.offsetWidth;
+        indicator.style.transform = `translateX(${offset}px)`;
+      }
     } else {
       btn.classList.remove('active');
     }
