@@ -32,6 +32,9 @@ async function handleGhostwrite(composeView, button) {
         return;
     }
 
+    // Set loading state immediately
+    setButtonLoading(button, true);
+
     try {
         // 1. Extract draft content
         const draft = composeView.getTextContent().trim();
@@ -48,7 +51,7 @@ async function handleGhostwrite(composeView, button) {
 
         // 3. Get user's selected tone from storage
         const { tone, anthropicApiKey } = await chrome.storage.local.get(['tone', 'anthropicApiKey']);
-        const selectedTone = tone || 'Professional';
+        const selectedTone = tone || 'Regular';
 
         // Check if API key is configured
         if (!anthropicApiKey) {
@@ -65,10 +68,7 @@ async function handleGhostwrite(composeView, button) {
             return;
         }
 
-        // 6. Set loading state
-        setButtonLoading(button, true);
-
-        // 7. Send to background service worker
+        // 6. Send to background service worker
         const response = await chrome.runtime.sendMessage({
             type: 'GHOSTWRITE_REQUEST',
             payload: {
@@ -79,7 +79,7 @@ async function handleGhostwrite(composeView, button) {
             }
         });
 
-        // 8. Handle response
+        // 7. Handle response
         if (response.success) {
             // Check if this is a new email with subject and body
             if (response.isNewEmail && response.subject && response.body) {
