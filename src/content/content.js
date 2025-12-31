@@ -86,17 +86,25 @@ async function handleGhostwrite(composeView, button) {
                 // Set the subject line
                 composeView.setSubject(response.subject);
 
-                // Use InboxSDK's setBodyHTML for initial insertion, then immediately clean formatting
+                // Extract signature BEFORE replacing content
+                const bodyElement = composeView.getBodyElement();
+                const signatureElement = extractSignature(bodyElement);
+
+                // Use InboxSDK's setBodyHTML for initial insertion
                 composeView.setBodyHTML(response.body);
 
-                // Immediately clean up formatting using plain text replacement
-                cleanBodyFormatting(composeView);
+                // Clean formatting and restore signature
+                cleanBodyFormatting(composeView, signatureElement);
             } else {
-                // Reply or polish mode - use InboxSDK's setBodyHTML, then clean
+                // Extract signature BEFORE replacing content
+                const bodyElement = composeView.getBodyElement();
+                const signatureElement = extractSignature(bodyElement);
+
+                // Reply or polish mode - use InboxSDK's setBodyHTML
                 composeView.setBodyHTML(response.polishedText);
 
-                // Immediately clean up formatting using plain text replacement
-                cleanBodyFormatting(composeView);
+                // Clean formatting and restore signature
+                cleanBodyFormatting(composeView, signatureElement);
             }
         } else {
             alert(`Ghostwriter Error: ${response.error}`);
@@ -205,9 +213,30 @@ function extractThreadContext(composeView) {
     return { type: 'reply', messages };
 }
 
+// Extract Gmail signature before content replacement
+// Returns cloned signature element or null if not found
+function extractSignature(bodyElement) {
+    try {
+        const signatureElement = bodyElement.querySelector('.gmail_signature');
+
+        if (!signatureElement) {
+            console.log('Ghostwriter: No signature found in compose body');
+            return null;
+        }
+
+        // Clone to preserve original DOM structure and all properties
+        const signatureClone = signatureElement.cloneNode(true);
+        console.log('Ghostwriter: Signature extracted successfully');
+        return signatureClone;
+    } catch (error) {
+        console.warn('Ghostwriter: Error extracting signature:', error);
+        return null;
+    }
+}
+
 // Clean body formatting by replacing with plain text in Gmail's native div structure
 // This strips all inline styles and unwanted formatting from AI-generated content
-function cleanBodyFormatting(composeView) {
+function cleanBodyFormatting(composeView, signatureElement) {
     try {
         const bodyElement = composeView.getBodyElement();
 
@@ -223,6 +252,12 @@ function cleanBodyFormatting(composeView) {
         bodyElement.innerHTML = plainText.split('\n').map(line =>
             line.trim() ? `<div>${line}</div>` : '<div><br></div>'
         ).join('');
+
+        // Re-append signature if it was extracted
+        if (signatureElement) {
+            bodyElement.appendChild(signatureElement);
+            console.log('Ghostwriter: Signature restored after formatting cleanup');
+        }
     } catch (error) {
         console.warn('Ghostwriter: Error cleaning formatting:', error);
     }

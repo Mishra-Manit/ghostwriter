@@ -60,7 +60,7 @@ async function handleGhostwriteRequest({ draft, context, tone, mode }) {
     const systemPrompt = buildSystemPrompt(tone, mode, context.type);
 
     // 3. Build user message
-    const userMessage = buildUserMessage(draft, context, mode);
+    const userMessage = buildUserMessage(tone, draft, context, mode);
 
     // Log final prompt being sent to LLM
     console.log('Ghostwriter: Final prompt to LLM:', {
