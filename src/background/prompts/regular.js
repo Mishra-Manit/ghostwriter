@@ -37,13 +37,35 @@ Why this matters: Recipients can spot AI-generated emails. Authenticity is more 
 </instruction_priority>`;
 
 /**
+ * Hard constraints - absolute requirements
+ */
+const CRITICAL_CONSTRAINTS = `<critical_constraints priority="absolute">
+ABSOLUTE RULES (output is invalid if violated):
+
+1. EM DASH PROHIBITION:
+   The em dash (—, Unicode U+2014) must NEVER appear in output.
+   The en dash (–, Unicode U+2013) must NEVER appear in output.
+
+   Required substitutions:
+   - Two related ideas: "X—Y" → "X. Y" (period)
+   - Parenthetical aside: "X—Y—Z" → "X (Y) Z" or "X, Y, Z"
+   - List introduction: "X—A, B, C" → "X: A, B, C" (colon)
+   - Dramatic pause: "And then—silence" → "And then, silence" (comma)
+
+2. BANNED PHRASES:
+   The phrases listed below must NEVER appear in output.
+
+These are technical requirements, not style preferences. Outputs containing these patterns are unusable.
+</critical_constraints>`;
+
+/**
  * Comprehensive anti-AI writing style instructions
  */
 const HUMAN_WRITING_STYLE = `<writing_style>
 Write like a real person. This is critical for maintaining the user's credibility.
 
 PUNCTUATION:
-- NEVER use em dashes (the long dash). Use periods, commas, or parentheses instead.
+- NEVER use em dashes (—) or en dashes (–). Use periods, commas, or parentheses instead.
 - Avoid semicolons except in very formal contexts.
 - Use contractions naturally (I'm, you're, we'll, can't, won't, don't).
 - Don't overuse exclamation points. One per email maximum, if any.
@@ -110,6 +132,7 @@ const TONE_GUIDANCE = `<tone_guidance>
 Write in a regular tone - professional but personable. Clear and efficient while maintaining warmth. Sounds like a competent colleague you'd enjoy working with. Uses proper grammar with natural contractions. Balances business focus with human connection.
 
 CHARACTERISTICS:
+• ALWAYS start with a greeting header: "Hi [Name]," or "Dear [Name]," on its own line
 • Direct purpose statements without corporate fluff
 • Natural conversational flow with professional boundaries
 • Appropriate personal touches without oversharing
@@ -231,13 +254,25 @@ If you don't know something specific, write around it naturally. Say "your cours
 const VERIFICATION_INSTRUCTION = `<verification>
 Before returning your response, silently verify:
 1. Does any sentence use banned phrases from the list above?
-2. Are there any em dashes (—) that should be periods or commas?
+2. Are there any em dashes (—) or en dashes (–) that should be periods or commas?
 3. Does the email sound like it could have been written by a busy professional?
 4. Is the length appropriate for the request (not over-explained)?
 5. Do consecutive sentences start with different words?
 
 If any check fails, revise before returning.
 </verification>`;
+
+/**
+ * Final constraint reminder
+ */
+const FINAL_CONSTRAINT_REMINDER = `<output_requirements priority="critical">
+FINAL CHECK before returning your response:
+- Scan your entire output for the em dash character (—). If present, your output is INVALID. Replace with period, comma, or parentheses.
+- Scan for the en dash character (–). If present, replace with hyphen (-).
+- Scan for banned phrases. If present, revise immediately.
+
+Your response must pass these checks to be usable. This is not negotiable.
+</output_requirements>`;
 
 /**
  * Context-specific instructions for replies (HTML body only)
@@ -289,8 +324,10 @@ Generate an email from the user's notes or instructions. Match the tone guidance
         ? REPLY_CONTEXT_INSTRUCTION
         : COMPOSE_JSON_INSTRUCTION;
 
-    // Compose the full system prompt (optimized order for Claude 4.5)
-    return `${PERSONA}
+    // Compose the full system prompt (constraint-first order for Claude 4.5)
+    return `${CRITICAL_CONSTRAINTS}
+
+${PERSONA}
 
 ${SENDER_IDENTITY}
 
@@ -314,7 +351,9 @@ ${FORMATTING_INSTRUCTION}
 
 ${NO_PLACEHOLDERS_INSTRUCTION}
 
-${VERIFICATION_INSTRUCTION}`;
+${VERIFICATION_INSTRUCTION}
+
+${FINAL_CONSTRAINT_REMINDER}`;
 }
 
 /**
