@@ -13,14 +13,6 @@ const PROMPT_MODULES = {
 };
 
 /**
- * Get the list of available tones
- * @returns {string[]} Array of tone names
- */
-export function getAvailableTones() {
-    return Object.keys(PROMPT_MODULES);
-}
-
-/**
  * Build the complete system prompt for the specified tone
  * @param {string} tone - The email tone (Regular, Bitcamp)
  * @param {string} mode - The generation mode (polish, generate)

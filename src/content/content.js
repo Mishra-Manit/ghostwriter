@@ -20,7 +20,7 @@ function getComposeState(composeView) {
         return state;
     }
 
-    state = { destroyed: Boolean(composeView.destroyed) };
+    state = { destroyed: Boolean(composeView?.destroyed) };
     composeViewState.set(composeView, state);
 
     if (typeof composeView.on === 'function') {
@@ -52,18 +52,18 @@ function safeGetBodyElement(composeView, state) {
 function composeViewHandler(composeView) {
     getComposeState(composeView);
     // Add Ghostwrite button to compose footer (near Send button)
-    const button = composeView.addButton({
+    composeView.addButton({
         title: "Ghostwrite",
         iconUrl: chrome.runtime.getURL('assets/icons/icon.png'),
         type: 'MODIFIER',  // Places button in footer near Send
         onClick: function (event) {
-            handleGhostwrite(event.composeView, button);
+            handleGhostwrite(event.composeView);
         }
     });
 }
 
 // Main click handler with dual-mode logic
-async function handleGhostwrite(composeView, button) {
+async function handleGhostwrite(composeView) {
     const state = getComposeState(composeView);
 
     // Prevent double-clicks while processing
@@ -72,7 +72,7 @@ async function handleGhostwrite(composeView, button) {
     }
 
     // Set loading state immediately
-    setButtonLoading(button, true);
+    setButtonLoading(true);
 
     try {
         // 1. Extract draft content
@@ -81,24 +81,19 @@ async function handleGhostwrite(composeView, button) {
         // 2. Extract thread context
         const context = extractThreadContext(composeView);
 
-        console.log('Ghostwriter: Context extracted:', {
-            type: context.type,
-            messageCount: context.messages.length,
-            senders: context.messages.map(m => m.sender)
-        });
-
         // 3. Get user's selected tone from storage
-        const { tone, anthropicApiKey } = await chrome.storage.local.get(['tone', 'anthropicApiKey']);
+        const { tone } = await chrome.storage.local.get(['tone']);
         const selectedTone = tone || 'Regular';
-
-        // Check if API key is configured
-        if (!anthropicApiKey) {
-            alert('Please configure your Anthropic API key by clicking the Ghostwriter extension icon.');
-            return;
-        }
 
         // 4. Determine mode: Polish (has draft) vs Generate (empty draft)
         const mode = draft.length > 0 ? 'polish' : 'generate';
+
+        console.log('Ghostwriter: LLM payload:', {
+            draft,
+            context,
+            tone: selectedTone,
+            mode
+        });
 
         // 5. For generate mode, validate we have context
         if (mode === 'generate' && context.messages.length === 0) {
@@ -132,7 +127,7 @@ async function handleGhostwrite(composeView, button) {
         console.error('Ghostwriter: Error:', error);
         alert(`Failed to ghostwrite: ${error.message}`);
     } finally {
-        setButtonLoading(button, false);
+        setButtonLoading(false);
     }
 }
 
@@ -145,7 +140,6 @@ function extractThreadContext(composeView) {
         return { type: 'compose', messages: [] };
     }
 
-    const messages = [];
     const seenBodies = new Set(); // Track unique message bodies to avoid duplicates
     const maxMessages = 10;
     // Gmail DOM structure:
@@ -218,21 +212,18 @@ function extractThreadContext(composeView) {
             }
 
             // Deduplicate
-            const bodyHash = body;
-            if (seenBodies.has(bodyHash)) {
+            if (seenBodies.has(body)) {
                 return;
             }
 
-            seenBodies.add(bodyHash);
+            seenBodies.add(body);
             collected.push({ sender, body });
         } catch (error) {
             // Ignore DOM extraction errors for individual messages
         }
     });
 
-    collected.reverse().forEach((message) => messages.push(message));
-
-    return { type: 'reply', messages };
+    return { type: 'reply', messages: collected.reverse() };
 }
 
 // Extract Gmail signature before content replacement
@@ -298,6 +289,6 @@ function cleanBodyFormatting(composeView, signatureElement, state) {
 let isProcessing = false;
 
 // Set button loading state
-function setButtonLoading(button, isLoading) {
+function setButtonLoading(isLoading) {
     isProcessing = isLoading;
 }

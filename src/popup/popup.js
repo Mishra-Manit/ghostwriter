@@ -90,7 +90,6 @@ document.querySelectorAll('.tone-btn').forEach(btn => {
     try {
       await chrome.storage.local.set({ tone });
       highlightTone(tone);
-      showStatus(`Tone set to ${tone}`, 'success');
     } catch (error) {
       console.error('Error saving tone:', error);
       showStatus('Error saving tone', 'error');
