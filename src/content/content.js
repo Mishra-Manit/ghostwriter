@@ -12,8 +12,46 @@ window.addEventListener('load', function () {
     });
 });
 
+const composeViewState = new WeakMap();
+
+function getComposeState(composeView) {
+    let state = composeViewState.get(composeView);
+    if (state) {
+        return state;
+    }
+
+    state = { destroyed: Boolean(composeView.destroyed) };
+    composeViewState.set(composeView, state);
+
+    if (typeof composeView.on === 'function') {
+        composeView.on('destroy', () => {
+            state.destroyed = true;
+        });
+    }
+
+    return state;
+}
+
+function isComposeViewActive(composeView, state) {
+    return !(state?.destroyed || composeView?.destroyed);
+}
+
+function safeGetBodyElement(composeView, state) {
+    if (!isComposeViewActive(composeView, state)) {
+        return null;
+    }
+
+    try {
+        return composeView.getBodyElement();
+    } catch (error) {
+        console.warn('Ghostwriter: Failed to read compose body element:', error);
+        return null;
+    }
+}
+
 // Handle each compose view
 function composeViewHandler(composeView) {
+    getComposeState(composeView);
     // Add Ghostwrite button to compose footer (near Send button)
     const button = composeView.addButton({
         title: "Ghostwrite",
@@ -27,6 +65,8 @@ function composeViewHandler(composeView) {
 
 // Main click handler with dual-mode logic
 async function handleGhostwrite(composeView, button) {
+    const state = getComposeState(composeView);
+
     // Prevent double-clicks while processing
     if (isProcessing) {
         return;
@@ -79,6 +119,12 @@ async function handleGhostwrite(composeView, button) {
             }
         });
 
+        // If compose view was closed while waiting, skip updates
+        if (!isComposeViewActive(composeView, state)) {
+            console.log('Ghostwriter: Compose view closed before response was applied');
+            return;
+        }
+
         // 7. Handle response
         if (response.success) {
             // Check if this is a new email with subject and body
@@ -87,24 +133,24 @@ async function handleGhostwrite(composeView, button) {
                 composeView.setSubject(response.subject);
 
                 // Extract signature BEFORE replacing content
-                const bodyElement = composeView.getBodyElement();
-                const signatureElement = extractSignature(bodyElement);
+                const bodyElement = safeGetBodyElement(composeView, state);
+                const signatureElement = bodyElement ? extractSignature(bodyElement) : null;
 
                 // Use InboxSDK's setBodyHTML for initial insertion
                 composeView.setBodyHTML(response.body);
 
                 // Clean formatting and restore signature
-                cleanBodyFormatting(composeView, signatureElement);
+                cleanBodyFormatting(composeView, signatureElement, state);
             } else {
                 // Extract signature BEFORE replacing content
-                const bodyElement = composeView.getBodyElement();
-                const signatureElement = extractSignature(bodyElement);
+                const bodyElement = safeGetBodyElement(composeView, state);
+                const signatureElement = bodyElement ? extractSignature(bodyElement) : null;
 
                 // Reply or polish mode - use InboxSDK's setBodyHTML
                 composeView.setBodyHTML(response.polishedText);
 
                 // Clean formatting and restore signature
-                cleanBodyFormatting(composeView, signatureElement);
+                cleanBodyFormatting(composeView, signatureElement, state);
             }
         } else {
             alert(`Ghostwriter Error: ${response.error}`);
@@ -128,6 +174,15 @@ function extractThreadContext(composeView) {
 
     const messages = [];
     const seenBodies = new Set(); // Track unique message bodies to avoid duplicates
+    const maxMessages = 10;
+    const stats = {
+        totalContainers: 0,
+        expandedCount: 0,
+        collapsedCount: 0,
+        skippedEmpty: 0,
+        skippedDuplicate: 0,
+        extractedCount: 0
+    };
 
     // Gmail DOM structure:
     // - Each message in a thread is in a .gs container
@@ -139,16 +194,18 @@ function extractThreadContext(composeView) {
 
     // Find all message containers using .gs class
     const messageContainers = document.querySelectorAll('.gs');
+    stats.totalContainers = messageContainers.length;
 
     if (messageContainers.length === 0) {
         return { type: 'reply', messages: [] };
     }
 
-    // Get last 5 messages to have more candidates, then filter to 3 valid ones
-    const recentMessages = Array.from(messageContainers).slice(-5);
+    // Walk newest -> oldest, then reverse so output is chronological
+    const orderedMessages = Array.from(messageContainers).reverse();
+    const collected = [];
 
-    recentMessages.forEach((msg, index) => {
-        if (messages.length >= 3) return;
+    orderedMessages.forEach((msg) => {
+        if (collected.length >= maxMessages) return;
 
         try {
             const isCollapsed = msg.classList.contains('gt');
@@ -164,12 +221,14 @@ function extractThreadContext(composeView) {
             }
 
             if (isCollapsed) {
+                stats.collapsedCount += 1;
                 // Collapsed message: extract preview snippet from .iA.g6 span
                 const snippetElement = msg.querySelector('.iA.g6 span, .iA span');
                 if (snippetElement) {
                     body = snippetElement.textContent.trim();
                 }
             } else {
+                stats.expandedCount += 1;
                 // Expanded message: extract full body from .a3s
                 const bodyElement = msg.querySelector('.a3s.aiL, .a3s');
                 if (bodyElement) {
@@ -194,20 +253,30 @@ function extractThreadContext(composeView) {
             }
 
             if (!body || body.length === 0) {
+                stats.skippedEmpty += 1;
                 return;
             }
 
             // Deduplicate
-            const bodyHash = body.substring(0, 200);
+            const bodyHash = body;
             if (seenBodies.has(bodyHash)) {
+                stats.skippedDuplicate += 1;
                 return;
             }
 
             seenBodies.add(bodyHash);
-            messages.push({ sender, body });
+            collected.push({ sender, body });
         } catch (error) {
             console.warn('Ghostwriter: Error extracting message:', error);
         }
+    });
+
+    collected.reverse().forEach((message) => messages.push(message));
+    stats.extractedCount = messages.length;
+
+    console.log('Ghostwriter: Thread context stats:', {
+        maxMessages,
+        ...stats
     });
 
     return { type: 'reply', messages };
@@ -236,9 +305,9 @@ function extractSignature(bodyElement) {
 
 // Clean body formatting by replacing with plain text in Gmail's native div structure
 // This strips all inline styles and unwanted formatting from AI-generated content
-function cleanBodyFormatting(composeView, signatureElement) {
+function cleanBodyFormatting(composeView, signatureElement, state) {
     try {
-        const bodyElement = composeView.getBodyElement();
+        const bodyElement = safeGetBodyElement(composeView, state);
 
         if (!bodyElement) {
             console.warn('Ghostwriter: Could not find body element for formatting cleanup');
