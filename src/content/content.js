@@ -7,6 +7,15 @@ window.addEventListener('load', function () {
     InboxSDK.load(2, 'sdk_ghostwriter_c73a9a612c').then(function (sdk) {
         // Register compose view handler
         sdk.Compose.registerComposeViewHandler(composeViewHandler);
+
+        // Register Copy Thread button on thread toolbar
+        sdk.Toolbars.registerThreadButton({
+            title: 'Copy Thread',
+            iconUrl: chrome.runtime.getURL('assets/icons/icon.png'),
+            onClick: function (event) {
+                copyThreadToClipboard();
+            },
+        });
     }).catch(function (error) {
         console.error('Ghostwriter: Failed to load InboxSDK:', error);
     });
@@ -292,3 +301,105 @@ let isProcessing = false;
 function setButtonLoading(isLoading) {
     isProcessing = isLoading;
 }
+
+// ============================================================
+// Copy Thread as Markdown
+// ============================================================
+
+// Extract the full email thread for the copy-to-markdown feature.
+// Unlike extractThreadContext (which feeds the AI), this captures ALL
+// messages plus the subject line and per-message timestamps.
+function extractFullThreadForCopy() {
+    // Subject – Gmail renders it inside an h2.hP element
+    const subjectEl = document.querySelector('h2.hP');
+    const subject = subjectEl ? subjectEl.textContent.trim() : 'No Subject';
+
+    const messageContainers = document.querySelectorAll('.gs');
+    const seenBodies = new Set();
+    const messages = [];
+
+    messageContainers.forEach((msg) => {
+        try {
+            const isCollapsed = msg.classList.contains('gt');
+
+            let body = '';
+            let sender = 'Unknown';
+            let date = '';
+
+            // Sender
+            const senderElement = msg.querySelector('.gD[email], .gD');
+            if (senderElement) {
+                sender = senderElement.getAttribute('name') || senderElement.textContent.trim();
+            }
+
+            // Date / timestamp – Gmail puts it in a span.g3 or the title
+            // attribute of the date element inside the message header
+            const dateElement = msg.querySelector('.g3') || msg.querySelector('span.gH span[title]');
+            if (dateElement) {
+                date = dateElement.getAttribute('title') || dateElement.textContent.trim();
+            }
+
+            if (isCollapsed) {
+                const snippetElement = msg.querySelector('.iA.g6 span, .iA span');
+                if (snippetElement) {
+                    body = snippetElement.textContent.trim();
+                }
+            } else {
+                const bodyElement = msg.querySelector('.a3s.aiL, .a3s');
+                if (bodyElement) {
+                    const bodyClone = bodyElement.cloneNode(true);
+                    bodyClone.querySelectorAll(
+                        '.gmail_quote, .gmail_quote_container, blockquote.gmail_quote, ' +
+                        '.gmail_attr, .HOEnZb, .h5'
+                    ).forEach(el => el.remove());
+                    body = bodyClone.innerText.trim();
+                }
+            }
+
+            if (!body || body.length === 0) return;
+            if (seenBodies.has(body)) return;
+
+            seenBodies.add(body);
+            messages.push({ sender, date, body });
+        } catch (error) {
+            console.debug('Ghostwriter: Skipped message during extraction:', error);
+        }
+    });
+
+    return { subject, messages };
+}
+
+// Convert thread data into a Markdown-formatted string.
+function formatThreadAsMarkdown(subject, messages) {
+    const lines = [];
+    lines.push(`# ${subject}`);
+    lines.push('');
+
+    messages.forEach((msg) => {
+        lines.push('---');
+        lines.push('');
+        lines.push(`## From: ${msg.sender}`);
+        if (msg.date) {
+            lines.push(`*${msg.date}*`);
+        }
+        lines.push('');
+        lines.push(msg.body);
+        lines.push('');
+    });
+
+    return lines.join('\n');
+}
+
+// Orchestrates extraction → formatting → clipboard copy.
+async function copyThreadToClipboard() {
+    try {
+        const { subject, messages } = extractFullThreadForCopy();
+        if (messages.length === 0) return;
+
+        const markdown = formatThreadAsMarkdown(subject, messages);
+        await navigator.clipboard.writeText(markdown);
+    } catch (error) {
+        console.error('Ghostwriter: Copy failed:', error);
+    }
+}
+
