@@ -1,64 +1,52 @@
-# Quick Setup Guide
+# Setup
 
-## ⚠️ Required Steps Before Using
+## Prerequisites
 
-### 1. Download InboxSDK (Required)
-The `inboxsdk.js` file currently contains only a placeholder. Download the actual library:
+- Node.js (for building)
+- Anthropic API key from [console.anthropic.com](https://console.anthropic.com)
+
+## Install and Build
 
 ```bash
-curl -L https://www.inboxsdk.com/build/inboxsdk.js > inboxsdk.js
+npm install
+npm run build
 ```
 
-Or open https://www.inboxsdk.com/build/inboxsdk.js in your browser and save as `inboxsdk.js`.
+## Load in Chrome
 
-### 2. Add Icon (Required)
-Create a 128x128px PNG icon named `icon.png`.
+1. Open `chrome://extensions/`
+2. Enable **Developer mode** (top-right toggle)
+3. Click **Load unpacked** and select this directory
+4. Click the Ghostwriter icon in the toolbar
+5. Enter your Anthropic API key and save
 
-**Quick option**: Download from https://www.flaticon.com/search?word=pen
+## Development
 
-### 3. Load in Chrome
+Use watch mode to auto-rebuild on file changes:
 
-1. Open `chrome://extensions/` in Chrome
-2. Enable "Developer mode" (toggle in top-right corner)
-3. Click "Load unpacked"
-4. Select this directory: `/Users/manitmishra/Desktop/ghostwriter`
+```bash
+npm run dev
+```
 
-### 4. Configure
-
-1. Click the Ghostwriter icon in Chrome toolbar
-2. Enter your Anthropic API key from https://console.anthropic.com
-3. Choose your preferred tone
-4. Visit Gmail and start ghostwriting!
+Then reload the extension at `chrome://extensions/` after each rebuild.
 
 ## Testing Checklist
 
-Once loaded, test these scenarios:
-
-- [ ] Extension appears in `chrome://extensions/`
-- [ ] Popup opens when clicking extension icon
-- [ ] API key saves successfully
-- [ ] Tone selector works
-- [ ] Button appears in Gmail compose window (next to Send)
-- [ ] Polish mode: Write draft → click Ghostwrite → text improves
-- [ ] Generate mode: Open reply → click Ghostwrite (empty) → draft generates
-- [ ] All three tones work (Professional, Friendly, Confident)
+- [ ] Extension appears in `chrome://extensions/` with no errors
+- [ ] Popup opens and accepts API key
+- [ ] Ghostwrite button appears in Gmail compose window (next to Send)
+- [ ] **Polish mode**: write a draft, click Ghostwrite — text improves
+- [ ] **Generate mode**: open a reply with no draft, click Ghostwrite — reply generates from thread context
+- [ ] Both tones work (Regular, Bitcamp)
+- [ ] Copy Thread button appears in thread toolbar and copies Markdown to clipboard
 
 ## Common Issues
 
-**"InboxSDK is not defined"**
-→ Download the actual InboxSDK library (step 1 above)
-
 **Button doesn't appear in Gmail**
-→ Refresh Gmail after loading extension
-→ Check console for errors (`Ctrl+Shift+J` in Gmail)
+Refresh Gmail after loading or reloading the extension.
 
 **"API key not configured"**
-→ Click extension icon and save your API key
+Click the extension icon and save your Anthropic API key.
 
 **Generate mode error**
-→ Generate only works in replies with thread context
-→ Try polish mode instead (write draft first)
-
-## Need Help?
-
-Check the full README.md for detailed documentation.
+Generate mode only works in reply windows with existing thread context. Write a draft and use Polish mode instead.

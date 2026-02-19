@@ -29,7 +29,7 @@ function getComposeState(composeView) {
         return state;
     }
 
-    state = { destroyed: Boolean(composeView?.destroyed) };
+    state = { destroyed: Boolean(composeView?.destroyed), isProcessing: false };
     composeViewState.set(composeView, state);
 
     if (typeof composeView.on === 'function') {
@@ -76,12 +76,12 @@ async function handleGhostwrite(composeView) {
     const state = getComposeState(composeView);
 
     // Prevent double-clicks while processing
-    if (isProcessing) {
+    if (state.isProcessing) {
         return;
     }
 
     // Set loading state immediately
-    setButtonLoading(true);
+    state.isProcessing = true;
 
     try {
         // 1. Extract draft content
@@ -96,13 +96,6 @@ async function handleGhostwrite(composeView) {
 
         // 4. Determine mode: Polish (has draft) vs Generate (empty draft)
         const mode = draft.length > 0 ? 'polish' : 'generate';
-
-        console.log('Ghostwriter: LLM payload:', {
-            draft,
-            context,
-            tone: selectedTone,
-            mode
-        });
 
         // 5. For generate mode, validate we have context
         if (mode === 'generate' && context.messages.length === 0) {
@@ -136,7 +129,7 @@ async function handleGhostwrite(composeView) {
         console.error('Ghostwriter: Error:', error);
         alert(`Failed to ghostwrite: ${error.message}`);
     } finally {
-        setButtonLoading(false);
+        state.isProcessing = false;
     }
 }
 
@@ -292,14 +285,6 @@ function cleanBodyFormatting(composeView, signatureElement, state) {
     } catch (error) {
         // Ignore formatting cleanup errors
     }
-}
-
-// Track loading state (InboxSDK compose buttons don't support setEnabled)
-let isProcessing = false;
-
-// Set button loading state
-function setButtonLoading(isLoading) {
-    isProcessing = isLoading;
 }
 
 // ============================================================
