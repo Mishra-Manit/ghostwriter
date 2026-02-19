@@ -33,3 +33,13 @@ The extension is built on Chrome Manifest V3 with three components:
 - **Content script** (`src/content/content.js`) — integrates with Gmail via [InboxSDK](https://www.inboxsdk.com/), extracts thread context from the DOM, and handles UI interactions
 - **Background service worker** (`src/background/background.js`) — handles Anthropic API calls and assembles prompts via tone modules in `src/background/prompts/`
 - **Popup** (`src/popup/`) — settings UI for API key and tone selection, persisted in `chrome.storage.local`
+
+## Contributing
+
+Contributions are welcome. To get started:
+
+1. Fork the repo and create a branch from `main`.
+2. Install dependencies and start the dev build watcher: `npm install && npm run dev`.
+3. Load the unpacked extension from the `dist/` folder at `chrome://extensions/`.
+4. Make your changes in `src/`, then reload the extension to test.
+5. Open a pull request with a clear description of what changed and why.

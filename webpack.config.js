@@ -10,7 +10,6 @@ module.exports = {
     resolve: {
         extensions: ['.js'],
     },
-    // Required for InboxSDK
     optimization: {
         minimize: true,
     },

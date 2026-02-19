@@ -14,6 +14,7 @@
 
 key.txt
 .claude/
+docs/plans/
 
 # npm
 node_modules/
