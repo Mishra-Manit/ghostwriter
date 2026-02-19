@@ -1,11 +1,6 @@
-// Ghostwriter Background Service Worker
-// Handles Anthropic API calls with Claude Sonnet 4.5
-
 import { buildSystemPrompt, buildUserMessage } from './prompts.js';
 
-// Listen for messages from content script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  // InboxSDK MV3: Handle pageWorld.js injection
   if (message.type === 'inboxsdk__injectPageWorld' && sender.tab) {
     if (chrome.scripting) {
       let documentIds;
@@ -28,7 +23,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === 'GHOSTWRITE_REQUEST') {
-    // Handle async API call
     handleGhostwriteRequest(message.payload)
       .then(result => sendResponse(result))
       .catch(error => sendResponse({
@@ -36,14 +30,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         error: error.message || 'Unknown error occurred'
       }));
 
-    // Return true to keep the message channel open for async response
+    // Keep the message channel open for async sendResponse.
     return true;
   }
 });
 
-// Main API request handler
 async function handleGhostwriteRequest({ draft, context, tone, mode }) {
-  // 1. Get API key from storage
   const { anthropicApiKey } = await chrome.storage.local.get(['anthropicApiKey']);
 
   if (!anthropicApiKey) {
@@ -53,18 +45,15 @@ async function handleGhostwriteRequest({ draft, context, tone, mode }) {
     };
   }
 
-  // 2. Build system prompt based on tone, mode, and context
   const systemPrompt = buildSystemPrompt(tone, mode, context.type);
 
-  // 3. Build user message
   const userMessage = buildUserMessage(tone, draft, context, mode);
 
-  // 4. Call Anthropic API
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+  const timeout = setTimeout(() => controller.abort(), 30000);
 
   const requestBody = {
-    model: 'claude-sonnet-4-5',  // Latest Claude Sonnet 4.5
+    model: 'claude-sonnet-4-5',
     max_tokens: 2048,
     system: systemPrompt,
     messages: [
@@ -81,9 +70,9 @@ async function handleGhostwriteRequest({ draft, context, tone, mode }) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': anthropicApiKey.trim(),  // Trim whitespace just in case
+        'x-api-key': anthropicApiKey.trim(),
         'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'  // Required for browser requests
+        'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify(requestBody),
       signal: controller.signal
@@ -111,7 +100,7 @@ async function handleGhostwriteRequest({ draft, context, tone, mode }) {
     try {
       errorData = JSON.parse(errorText);
     } catch (e) {
-      // Ignore parse errors for non-JSON error bodies
+      // Non-JSON errors fall back to raw error text below.
     }
 
     if (response.status === 401) {
@@ -134,7 +123,6 @@ async function handleGhostwriteRequest({ draft, context, tone, mode }) {
     };
   }
 
-  // 5. Parse response
   const data = await response.json();
 
   if (!data.content || !data.content[0] || !data.content[0].text) {
@@ -146,16 +134,13 @@ async function handleGhostwriteRequest({ draft, context, tone, mode }) {
 
   const rawText = data.content[0].text;
 
-  // For new compose emails (not replies), parse JSON response
   if (context.type === 'compose') {
     try {
-      // Strip markdown code blocks if present (e.g., ```json ... ```)
       let jsonText = rawText.trim();
       if (jsonText.startsWith('```')) {
         jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
       }
 
-      // Try to parse as JSON for new emails
       const jsonResponse = JSON.parse(jsonText);
       if (jsonResponse.subject && jsonResponse.body) {
         return {
@@ -166,11 +151,10 @@ async function handleGhostwriteRequest({ draft, context, tone, mode }) {
         };
       }
     } catch (parseError) {
-      // Ignore parse errors, fall back to plain HTML handling
+      // If parse fails, treat output as plain polished text.
     }
   }
 
-  // For replies or if JSON parsing fails, return as polishedText
   return {
     success: true,
     isNewEmail: false,

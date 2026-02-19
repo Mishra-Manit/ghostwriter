@@ -1,20 +1,16 @@
-// Load saved settings when popup opens
 document.addEventListener('DOMContentLoaded', async () => {
   try {
-    // Load API key and tone from storage
     const { anthropicApiKey, tone } = await chrome.storage.local.get([
       'anthropicApiKey',
       'tone'
     ]);
 
-    // Show compact or full API key section based on whether key exists
     if (anthropicApiKey) {
       showApiKeyCompact();
     } else {
-      showApiKeyFull(false); // No cancel button for first-time setup
+      showApiKeyFull(false);
     }
 
-    // Highlight selected tone (default: Regular)
     const selectedTone = tone || 'Regular';
     highlightTone(selectedTone);
   } catch (error) {
@@ -23,13 +19,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// Helper: Show compact API key view
 function showApiKeyCompact() {
   document.getElementById('apiKeyCompact').classList.remove('hidden');
   document.getElementById('apiKeyFull').classList.add('hidden');
 }
 
-// Helper: Show full API key form
 function showApiKeyFull(showCancel = true) {
   document.getElementById('apiKeyCompact').classList.add('hidden');
   document.getElementById('apiKeyFull').classList.remove('hidden');
@@ -42,20 +36,16 @@ function showApiKeyFull(showCancel = true) {
   }
 }
 
-// Change API Key button
 document.getElementById('changeKeyButton').addEventListener('click', async () => {
-  // Load current key into input for editing
   const { anthropicApiKey } = await chrome.storage.local.get(['anthropicApiKey']);
   document.getElementById('apiKeyInput').value = anthropicApiKey || '';
   showApiKeyFull(true);
 });
 
-// Cancel API Key edit
 document.getElementById('cancelKeyButton').addEventListener('click', () => {
   showApiKeyCompact();
 });
 
-// Save API key
 document.getElementById('saveKeyButton').addEventListener('click', async () => {
   const apiKey = document.getElementById('apiKeyInput').value.trim();
 
@@ -64,7 +54,6 @@ document.getElementById('saveKeyButton').addEventListener('click', async () => {
     return;
   }
 
-  // Validate API key format
   if (!apiKey.startsWith('sk-ant-')) {
     const confirmed = confirm(
       'API key format looks unusual. Anthropic API keys typically start with "sk-ant-". Save anyway?'
@@ -82,7 +71,6 @@ document.getElementById('saveKeyButton').addEventListener('click', async () => {
   }
 });
 
-// Tone selection
 document.querySelectorAll('.tone-btn').forEach(btn => {
   btn.addEventListener('click', async () => {
     const tone = btn.dataset.tone;
@@ -97,7 +85,6 @@ document.querySelectorAll('.tone-btn').forEach(btn => {
   });
 });
 
-// Helper: Highlight selected tone button with sliding indicator
 function highlightTone(selectedTone) {
   const buttons = document.querySelectorAll('.tone-btn');
   const indicator = document.querySelector('.segmented-indicator');
@@ -106,7 +93,6 @@ function highlightTone(selectedTone) {
     if (btn.dataset.tone === selectedTone) {
       btn.classList.add('active');
 
-      // Update sliding indicator position
       if (indicator) {
         const offset = index * btn.offsetWidth;
         indicator.style.transform = `translateX(${offset}px)`;
@@ -117,20 +103,17 @@ function highlightTone(selectedTone) {
   });
 }
 
-// Helper: Show status message
 function showStatus(message, type) {
   const statusElement = document.getElementById('status');
   statusElement.textContent = message;
   statusElement.className = `status ${type}`;
 
-  // Clear status after 3 seconds
   setTimeout(() => {
     statusElement.textContent = '';
     statusElement.className = 'status';
   }, 3000);
 }
 
-// Allow Enter key to save API key
 document.getElementById('apiKeyInput').addEventListener('keypress', (e) => {
   if (e.key === 'Enter') {
     document.getElementById('saveKeyButton').click();

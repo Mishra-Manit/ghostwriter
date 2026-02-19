@@ -1,6 +1,3 @@
-// Shared Prompt Constants
-// Used across all tone modules
-
 export const CRITICAL_CONSTRAINTS = `<critical_constraints priority="absolute">
 ABSOLUTE RULES (output is invalid if violated):
 
