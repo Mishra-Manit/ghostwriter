@@ -58,6 +58,11 @@ export function extractThreadContext(composeView) {
                 return;
             }
 
+            const isTruncatedDuplicate = Array.from(seenBodies).some(seen => seen.startsWith(body));
+            if (isTruncatedDuplicate) {
+                return;
+            }
+
             seenBodies.add(body);
             collected.push({ sender, body });
         } catch (error) {
@@ -110,6 +115,12 @@ export function extractFullThreadForCopy() {
 
             if (!body || body.length === 0) return;
             if (seenBodies.has(body)) return;
+
+            // Detect truncated snippets: skip if an already-collected full body starts with this text.
+            // Gmail renders long emails with both an expanded .a3s element and a collapsed .iA snippet,
+            // producing two .gs nodes for the same email. The snippet is a prefix of the full body.
+            const isTruncatedDuplicate = Array.from(seenBodies).some(seen => seen.startsWith(body));
+            if (isTruncatedDuplicate) return;
 
             seenBodies.add(body);
             messages.push({ sender, date, body });
