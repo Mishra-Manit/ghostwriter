@@ -49,6 +49,17 @@ async function handleGhostwriteRequest({ draft, context, tone, mode }) {
 
   const userMessage = buildUserMessage(tone, draft, context, mode);
 
+  console.group('[Ghostwriter] LLM Request Context');
+  console.log('--- METADATA ---');
+  console.log('Tone:', tone);
+  console.log('Mode:', mode);
+  console.log('Context type:', context.type);
+  console.log('--- SYSTEM PROMPT ---');
+  console.log(systemPrompt);
+  console.log('--- USER MESSAGE ---');
+  console.log(userMessage);
+  console.groupEnd();
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30000);
 

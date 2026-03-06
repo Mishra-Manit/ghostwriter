@@ -2,6 +2,27 @@ const QUOTED_CONTENT_SELECTORS =
     '.gmail_quote, .gmail_quote_container, blockquote.gmail_quote, ' +
     '.gmail_attr, .HOEnZb, .h5';
 
+function normalizeForComparison(text) {
+    return text.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+}
+
+function isDuplicate(normalizedBody, seenNormalized) {
+    for (const seen of seenNormalized) {
+        if (seen === normalizedBody) return { duplicate: true, replacesIndex: -1 };
+        if (seen.startsWith(normalizedBody)) return { duplicate: true, replacesIndex: -1 };
+    }
+    return { duplicate: false, replacesIndex: -1 };
+}
+
+function findSnippetToReplace(normalizedBody, seenNormalized) {
+    for (let i = 0; i < seenNormalized.length; i++) {
+        if (normalizedBody.startsWith(seenNormalized[i]) && normalizedBody !== seenNormalized[i]) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 export function extractThreadContext(composeView) {
     const isReply = composeView.isReply();
 
@@ -9,7 +30,6 @@ export function extractThreadContext(composeView) {
         return { type: 'compose', messages: [] };
     }
 
-    const seenBodies = new Set();
     const maxMessages = 10;
     const messageContainers = document.querySelectorAll('.gs');
 
@@ -17,9 +37,11 @@ export function extractThreadContext(composeView) {
         return { type: 'reply', messages: [] };
     }
 
+    const seenNormalized = [];
+    const collected = [];
+
     // Gmail renders newest first. We collect newest->oldest, then reverse back to chronological.
     const orderedMessages = Array.from(messageContainers).reverse();
-    const collected = [];
 
     orderedMessages.forEach((msg) => {
         if (collected.length >= maxMessages) return;
@@ -44,7 +66,6 @@ export function extractThreadContext(composeView) {
                 const bodyElement = msg.querySelector('.a3s.aiL, .a3s');
                 if (bodyElement) {
                     const bodyClone = bodyElement.cloneNode(true);
-                    // Remove quoted/attribution blocks to avoid repeating earlier thread content.
                     bodyClone.querySelectorAll(QUOTED_CONTENT_SELECTORS).forEach(el => el.remove());
                     body = bodyClone.innerText.trim();
                 }
@@ -54,16 +75,21 @@ export function extractThreadContext(composeView) {
                 return;
             }
 
-            if (seenBodies.has(body)) {
+            const normalized = normalizeForComparison(body);
+
+            const dupCheck = isDuplicate(normalized, seenNormalized);
+            if (dupCheck.duplicate) {
                 return;
             }
 
-            const isTruncatedDuplicate = Array.from(seenBodies).some(seen => seen.startsWith(body));
-            if (isTruncatedDuplicate) {
+            const replaceIndex = findSnippetToReplace(normalized, seenNormalized);
+            if (replaceIndex !== -1) {
+                seenNormalized[replaceIndex] = normalized;
+                collected[replaceIndex] = { sender, body };
                 return;
             }
 
-            seenBodies.add(body);
+            seenNormalized.push(normalized);
             collected.push({ sender, body });
         } catch (error) {
             // Ignore single-message parse failures so one bad node doesn't break extraction.
@@ -78,7 +104,7 @@ export function extractFullThreadForCopy() {
     const subject = subjectEl ? subjectEl.textContent.trim() : 'No Subject';
 
     const messageContainers = document.querySelectorAll('.gs');
-    const seenBodies = new Set();
+    const seenNormalized = [];
     const messages = [];
 
     messageContainers.forEach((msg) => {
@@ -114,15 +140,20 @@ export function extractFullThreadForCopy() {
             }
 
             if (!body || body.length === 0) return;
-            if (seenBodies.has(body)) return;
 
-            // Detect truncated snippets: skip if an already-collected full body starts with this text.
-            // Gmail renders long emails with both an expanded .a3s element and a collapsed .iA snippet,
-            // producing two .gs nodes for the same email. The snippet is a prefix of the full body.
-            const isTruncatedDuplicate = Array.from(seenBodies).some(seen => seen.startsWith(body));
-            if (isTruncatedDuplicate) return;
+            const normalized = normalizeForComparison(body);
 
-            seenBodies.add(body);
+            const dupCheck = isDuplicate(normalized, seenNormalized);
+            if (dupCheck.duplicate) return;
+
+            const replaceIndex = findSnippetToReplace(normalized, seenNormalized);
+            if (replaceIndex !== -1) {
+                seenNormalized[replaceIndex] = normalized;
+                messages[replaceIndex] = { sender, date, body };
+                return;
+            }
+
+            seenNormalized.push(normalized);
             messages.push({ sender, date, body });
         } catch (error) {
             console.debug('Ghostwriter: Skipped message during extraction:', error);
